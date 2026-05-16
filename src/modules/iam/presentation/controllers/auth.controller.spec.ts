@@ -90,20 +90,34 @@ describe("AuthController", () => {
 
     it("delegates loginWithGoogle", async () => {
         await controller.loginWithGoogle(
-            {email: "user@example.com", deviceName: null} as never,
-            buildRequest(),
+            {email: "User@Example.com", deviceName: "browser"} as never,
+            buildRequest({headers: {"user-agent": ["mobile", "ignored"]}}),
         );
 
-        expect(loginWithGoogleUseCase.execute).toHaveBeenCalledTimes(1);
+        expect(loginWithGoogleUseCase.execute).toHaveBeenCalledWith(
+            expect.objectContaining({
+                email: "user@example.com",
+                userAgent: "mobile",
+                ipAddress: "127.0.0.1",
+                deviceName: "browser",
+            }),
+        );
     });
 
     it("delegates loginWithApple", async () => {
         await controller.loginWithApple(
-            {email: "user@example.com", deviceName: null} as never,
-            buildRequest(),
+            {email: "User@Example.com", deviceName: "iphone"} as never,
+            buildRequest({headers: {}, ip: undefined}),
         );
 
-        expect(loginWithAppleUseCase.execute).toHaveBeenCalledTimes(1);
+        expect(loginWithAppleUseCase.execute).toHaveBeenCalledWith(
+            expect.objectContaining({
+                email: "user@example.com",
+                userAgent: null,
+                ipAddress: null,
+                deviceName: "iphone",
+            }),
+        );
     });
 
     it("delegates refreshToken", async () => {
@@ -117,15 +131,19 @@ describe("AuthController", () => {
     it("delegates logout", async () => {
         await controller.logout({refreshToken: "abc"} as never);
 
-        expect(logoutUseCase.execute).toHaveBeenCalledTimes(1);
+        expect(logoutUseCase.execute).toHaveBeenCalledWith(
+            expect.objectContaining({refreshToken: "abc"}),
+        );
     });
 
     it("delegates requestPasswordReset", async () => {
         await controller.requestPasswordReset({
-            identifier: "user@example.com",
+            identifier: "User@Example.com",
         } as never);
 
-        expect(requestPasswordResetUseCase.execute).toHaveBeenCalledTimes(1);
+        expect(requestPasswordResetUseCase.execute).toHaveBeenCalledWith(
+            expect.objectContaining({identifier: "user@example.com"}),
+        );
     });
 
     it("delegates resetPassword", async () => {

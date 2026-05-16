@@ -40,6 +40,7 @@ import {PrismaAccountAccessReader} from "./infrastructure/readers/prisma-account
 
 @Module({
     imports: [
+        ConfigModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],
             inject: [ConfigService],

@@ -74,15 +74,35 @@ describe("AccountController", () => {
         );
     });
 
-    it("requestEmailVerification(), verifyEmail(), requestPhoneVerification(), verifyPhone() all delegate", async () => {
+    it("requestEmailVerification() targets the authenticated user", async () => {
         await controller.requestEmailVerification(authUser, {} as never);
+
+        expect(requestEmailVerificationUseCase.execute).toHaveBeenCalledWith(
+            expect.objectContaining({userId: TEST_USER_ID}),
+        );
+    });
+
+    it("verifyEmail() targets the authenticated user", async () => {
         await controller.verifyEmail(authUser, {} as never);
+
+        expect(verifyEmailUseCase.execute).toHaveBeenCalledWith(
+            expect.objectContaining({userId: TEST_USER_ID}),
+        );
+    });
+
+    it("requestPhoneVerification() targets the authenticated user", async () => {
         await controller.requestPhoneVerification(authUser, {} as never);
+
+        expect(requestPhoneVerificationUseCase.execute).toHaveBeenCalledWith(
+            expect.objectContaining({userId: TEST_USER_ID}),
+        );
+    });
+
+    it("verifyPhone() targets the authenticated user", async () => {
         await controller.verifyPhone(authUser, {} as never);
 
-        expect(requestEmailVerificationUseCase.execute).toHaveBeenCalledTimes(1);
-        expect(verifyEmailUseCase.execute).toHaveBeenCalledTimes(1);
-        expect(requestPhoneVerificationUseCase.execute).toHaveBeenCalledTimes(1);
-        expect(verifyPhoneUseCase.execute).toHaveBeenCalledTimes(1);
+        expect(verifyPhoneUseCase.execute).toHaveBeenCalledWith(
+            expect.objectContaining({userId: TEST_USER_ID}),
+        );
     });
 });
