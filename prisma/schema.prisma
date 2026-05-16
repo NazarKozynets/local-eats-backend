@@ -1,0 +1,638 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// USERS / IAM
+
+enum UserRole {
+  CUSTOMER
+  COURIER
+  RESTAURANT_MANAGER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+model User {
+  id              String     @id @default(uuid())
+  email           String?    @unique
+  phone           String?    @unique
+  passwordHash    String?    @map("password_hash")
+  role            UserRole
+  status          UserStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  phoneVerifiedAt DateTime?  @map("phone_verified_at")
+
+  blockedUntil DateTime? @map("blocked_until")
+  blockReason  String?   @map("block_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sessions        UserSession[]
+  customerProfile CustomerProfile?
+  courierProfile  CourierProfile?
+  restaurantStaff RestaurantStaff[]
+
+  notifications          Notification[]
+  reviews                Review[]
+  orderStatusChanges     OrderStatusHistory[]    @relation("OrderStatusChangedBy")
+  deliveryProblemReports DeliveryProblemReport[] @relation("DeliveryProblemReporter")
+
+  @@index([role, status], name: "idx_users_role_status")
+  @@index([status], name: "idx_users_status")
+  @@index([blockedUntil], name: "idx_users_blocked_until")
+  @@map("users")
+}
+
+model UserSession {
+  id               String @id @default(uuid())
+  userId           String @map("user_id")
+  refreshTokenHash String @unique @map("refresh_token_hash")
+
+  userAgent  String? @map("user_agent")
+  ipAddress  String? @map("ip_address")
+  deviceName String? @map("device_name")
+
+  replacedBySessionId String? @unique @map("replaced_by_session_id")
+
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBySession UserSession? @relation("SessionReplacement", fields: [replacedBySessionId], references: [id])
+  replacesSession   UserSession? @relation("SessionReplacement")
+
+  @@index([userId], name: "idx_user_sessions_user_id")
+  @@index([expiresAt], name: "idx_user_sessions_expires_at")
+  @@index([revokedAt], name: "idx_user_sessions_revoked_at")
+  @@index([userId, revokedAt], name: "idx_user_sessions_user_id_revoked_at")
+  @@map("user_sessions")
+}
+
+// CUSTOMER
+
+model CustomerProfile {
+  id          String  @id @default(uuid())
+  userId      String  @unique @map("user_id")
+  displayName String? @map("display_name")
+  avatarUrl   String? @map("avatar_url")
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addresses CustomerAddress[]
+  orders    Order[]
+  reviews   Review[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("customer_profiles")
+}
+
+model CustomerAddress {
+  id         String @id @default(uuid())
+  customerId String @map("customer_id")
+
+  label     String?
+  city      String
+  street    String
+  building  String
+  apartment String?
+  entrance  String?
+  floor     String?
+  comment   String?
+
+  location Unsupported("geography(Point, 4326)")?
+
+  isDefault Boolean @default(false) @map("is_default")
+
+  customer CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([customerId], name: "idx_customer_addresses_customer_id")
+  @@index([city], name: "idx_customer_addresses_city")
+  @@map("customer_addresses")
+}
+
+// COURIER
+
+enum CourierVerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum CourierProfileStatus {
+  INCOMPLETE
+  ACTIVE
+  PAUSED
+  BLOCKED
+  REJECTED
+}
+
+enum CourierAvailabilityStatus {
+  OFFLINE
+  ONLINE
+  BUSY
+}
+
+enum CourierVehicleType {
+  WALK
+  BICYCLE
+  SCOOTER
+  MOTORBIKE
+  CAR
+}
+
+model CourierProfile {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+
+  displayName String? @map("display_name")
+  avatarUrl   String? @map("avatar_url")
+
+  verificationStatus         CourierVerificationStatus @default(UNVERIFIED) @map("verification_status")
+  verificationRejectedReason String?                   @map("verification_rejected_reason")
+  verifiedAt                 DateTime?                 @map("verified_at")
+
+  profileStatus      CourierProfileStatus      @default(INCOMPLETE) @map("profile_status")
+  availabilityStatus CourierAvailabilityStatus @default(OFFLINE) @map("availability_status")
+
+  vehicleType CourierVehicleType? @map("vehicle_type")
+
+  currentLocation  Unsupported("geography(Point, 4326)")? @map("current_location")
+  deliveryRadiusKm Int                                    @default(5) @map("delivery_radius_km")
+
+  completedDeliveriesCount Int   @default(0) @map("completed_deliveries_count")
+  ratingAvg                Float @default(0) @map("rating_avg")
+  ratingCount              Int   @default(0) @map("rating_count")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders  Order[]
+  reviews Review[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([verificationStatus], name: "idx_courier_profiles_verification_status")
+  @@index([profileStatus], name: "idx_courier_profiles_profile_status")
+  @@index([availabilityStatus], name: "idx_courier_profiles_availability_status")
+  @@index([vehicleType], name: "idx_courier_profiles_vehicle_type")
+  @@map("courier_profiles")
+}
+
+// RESTAURANT
+
+enum RestaurantVerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum RestaurantStatus {
+  DRAFT
+  PENDING_VERIFICATION
+  ACTIVE
+  PAUSED
+  BLOCKED
+  REJECTED
+}
+
+enum RestaurantStaffRole {
+  OWNER
+  MANAGER
+}
+
+model Restaurant {
+  id String @id @default(uuid())
+
+  name        String
+  description String?
+  logoUrl     String? @map("logo_url")
+  coverUrl    String? @map("cover_url")
+
+  verificationStatus         RestaurantVerificationStatus @default(UNVERIFIED) @map("verification_status")
+  verificationRejectedReason String?                      @map("verification_rejected_reason")
+  verifiedAt                 DateTime?                    @map("verified_at")
+
+  status RestaurantStatus @default(DRAFT)
+
+  city        String
+  addressText String                                 @map("address_text")
+  location    Unsupported("geography(Point, 4326)")?
+
+  phone String?
+  email String?
+
+  minOrderAmount Decimal @default(0) @map("min_order_amount") @db.Decimal(10, 2)
+  deliveryFee    Decimal @default(0) @map("delivery_fee") @db.Decimal(10, 2)
+
+  ratingAvg   Float @default(0) @map("rating_avg")
+  ratingCount Int   @default(0) @map("rating_count")
+
+  staff          RestaurantStaff[]
+  workingHours   RestaurantWorkingHour[]
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
+  orders         Order[]
+  reviews        Review[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status], name: "idx_restaurants_status")
+  @@index([verificationStatus], name: "idx_restaurants_verification_status")
+  @@index([city], name: "idx_restaurants_city")
+  @@index([ratingAvg], name: "idx_restaurants_rating_avg")
+  @@map("restaurants")
+}
+
+model RestaurantStaff {
+  id           String              @id @default(uuid())
+  restaurantId String              @map("restaurant_id")
+  userId       String              @map("user_id")
+  role         RestaurantStaffRole
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([restaurantId, userId], name: "uq_restaurant_staff_restaurant_user")
+  @@index([userId], name: "idx_restaurant_staff_user_id")
+  @@index([restaurantId], name: "idx_restaurant_staff_restaurant_id")
+  @@map("restaurant_staff")
+}
+
+model RestaurantWorkingHour {
+  id           String @id @default(uuid())
+  restaurantId String @map("restaurant_id")
+
+  dayOfWeek Int     @map("day_of_week") // 1-7, где 1 = Monday
+  opensAt   String? @map("opens_at") // "09:00"
+  closesAt  String? @map("closes_at") // "22:00"
+  isClosed  Boolean @default(false) @map("is_closed")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([restaurantId, dayOfWeek], name: "uq_restaurant_working_hours_day")
+  @@index([restaurantId], name: "idx_restaurant_working_hours_restaurant_id")
+  @@map("restaurant_working_hours")
+}
+
+// MENU
+
+enum MenuItemStatus {
+  AVAILABLE
+  UNAVAILABLE
+  HIDDEN
+}
+
+model MenuCategory {
+  id           String @id @default(uuid())
+  restaurantId String @map("restaurant_id")
+
+  name     String
+  position Int     @default(0)
+  isActive Boolean @default(true) @map("is_active")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  items      MenuItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([restaurantId], name: "idx_menu_categories_restaurant_id")
+  @@index([restaurantId, isActive], name: "idx_menu_categories_restaurant_active")
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id           String  @id @default(uuid())
+  restaurantId String  @map("restaurant_id")
+  categoryId   String? @map("category_id")
+
+  name        String
+  description String?
+  imageUrl    String? @map("image_url")
+
+  price  Decimal        @db.Decimal(10, 2)
+  status MenuItemStatus @default(AVAILABLE)
+
+  weightGrams       Int?    @map("weight_grams")
+  estimatedCookTime Int?    @map("estimated_cook_time") // minutes
+  isPopular         Boolean @default(false) @map("is_popular")
+
+  restaurant Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category   MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([restaurantId], name: "idx_menu_items_restaurant_id")
+  @@index([categoryId], name: "idx_menu_items_category_id")
+  @@index([restaurantId, status], name: "idx_menu_items_restaurant_status")
+  @@map("menu_items")
+}
+
+// ORDERS
+
+enum OrderStatus {
+  CREATED
+  ACCEPTED_BY_RESTAURANT
+  REJECTED_BY_RESTAURANT
+  PREPARING
+  READY_FOR_PICKUP
+  ASSIGNED_TO_COURIER
+  PICKED_UP
+  DELIVERING
+  DELIVERED
+  CANCELLED
+  PROBLEM
+}
+
+enum PaymentMethod {
+  CASH_ON_DELIVERY
+  CARD_ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum Currency {
+  UAH
+  EUR
+  USD
+}
+
+model Order {
+  id         String @id @default(uuid())
+  publicCode String @unique @map("public_code")
+
+  customerId   String  @map("customer_id")
+  restaurantId String  @map("restaurant_id")
+  courierId    String? @map("courier_id")
+
+  status OrderStatus @default(CREATED)
+
+  paymentMethod PaymentMethod @map("payment_method")
+  paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
+  currency      Currency      @default(UAH)
+
+  deliveryAddressText String                                 @map("delivery_address_text")
+  deliveryLocation    Unsupported("geography(Point, 4326)")? @map("delivery_location")
+
+  customerComment    String? @map("customer_comment")
+  restaurantComment  String? @map("restaurant_comment")
+  cancellationReason String? @map("cancellation_reason")
+
+  subtotalPrice  Decimal @map("subtotal_price") @db.Decimal(10, 2)
+  deliveryFee    Decimal @default(0) @map("delivery_fee") @db.Decimal(10, 2)
+  serviceFee     Decimal @default(0) @map("service_fee") @db.Decimal(10, 2)
+  discountAmount Decimal @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  totalPrice     Decimal @map("total_price") @db.Decimal(10, 2)
+
+  acceptedAt  DateTime? @map("accepted_at")
+  readyAt     DateTime? @map("ready_at")
+  pickedUpAt  DateTime? @map("picked_up_at")
+  deliveredAt DateTime? @map("delivered_at")
+  cancelledAt DateTime? @map("cancelled_at")
+
+  customer   CustomerProfile @relation(fields: [customerId], references: [id])
+  restaurant Restaurant      @relation(fields: [restaurantId], references: [id])
+  courier    CourierProfile? @relation(fields: [courierId], references: [id])
+
+  items          OrderItem[]
+  statusHistory  OrderStatusHistory[]
+  payment        Payment?
+  problemReports DeliveryProblemReport[]
+  reviews        Review[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([customerId], name: "idx_orders_customer_id")
+  @@index([restaurantId], name: "idx_orders_restaurant_id")
+  @@index([courierId], name: "idx_orders_courier_id")
+  @@index([status], name: "idx_orders_status")
+  @@index([restaurantId, status], name: "idx_orders_restaurant_status")
+  @@index([courierId, status], name: "idx_orders_courier_status")
+  @@index([createdAt], name: "idx_orders_created_at")
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  orderId    String  @map("order_id")
+  menuItemId String? @map("menu_item_id")
+
+  nameSnapshot  String  @map("name_snapshot")
+  priceSnapshot Decimal @map("price_snapshot") @db.Decimal(10, 2)
+  quantity      Int
+  comment       String?
+
+  totalPriceSnapshot Decimal @map("total_price_snapshot") @db.Decimal(10, 2)
+
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId], name: "idx_order_items_order_id")
+  @@index([menuItemId], name: "idx_order_items_menu_item_id")
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id              String      @id @default(uuid())
+  orderId         String      @map("order_id")
+  status          OrderStatus
+  changedByUserId String?     @map("changed_by_user_id")
+  comment         String?
+
+  order         Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByUser User? @relation("OrderStatusChangedBy", fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId], name: "idx_order_status_history_order_id")
+  @@index([status], name: "idx_order_status_history_status")
+  @@index([changedByUserId], name: "idx_order_status_history_changed_by_user_id")
+  @@map("order_status_history")
+}
+
+// PAYMENTS
+
+enum PaymentProvider {
+  CASH
+  STRIPE
+  LIQPAY
+  WAYFORPAY
+  MOCK
+}
+
+model Payment {
+  id      String @id @default(uuid())
+  orderId String @unique @map("order_id")
+
+  provider PaymentProvider
+  status   PaymentStatus   @default(PENDING)
+  amount   Decimal         @db.Decimal(10, 2)
+  currency Currency        @default(UAH)
+
+  providerPaymentId String? @map("provider_payment_id")
+  failureReason     String? @map("failure_reason")
+
+  paidAt     DateTime? @map("paid_at")
+  refundedAt DateTime? @map("refunded_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status], name: "idx_payments_status")
+  @@index([provider], name: "idx_payments_provider")
+  @@map("payments")
+}
+
+// REVIEWS
+
+enum ReviewTarget {
+  RESTAURANT
+  COURIER
+}
+
+model Review {
+  id             String       @id @default(uuid())
+  orderId        String       @map("order_id")
+  reviewerUserId String       @map("reviewer_user_id")
+  customerId     String       @map("customer_id")
+  target         ReviewTarget
+
+  restaurantId String? @map("restaurant_id")
+  courierId    String? @map("courier_id")
+
+  rating  Int
+  comment String?
+
+  order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reviewerUser User            @relation(fields: [reviewerUserId], references: [id], onDelete: Cascade)
+  customer     CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant?     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  courier      CourierProfile? @relation(fields: [courierId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([orderId, target], name: "uq_reviews_order_target")
+  @@index([reviewerUserId], name: "idx_reviews_reviewer_user_id")
+  @@index([customerId], name: "idx_reviews_customer_id")
+  @@index([restaurantId], name: "idx_reviews_restaurant_id")
+  @@index([courierId], name: "idx_reviews_courier_id")
+  @@map("reviews")
+}
+
+// DELIVERY PROBLEMS
+
+enum DeliveryProblemType {
+  RESTAURANT_DELAY
+  COURIER_DELAY
+  CUSTOMER_UNAVAILABLE
+  WRONG_ADDRESS
+  DAMAGED_ORDER
+  MISSING_ITEMS
+  OTHER
+}
+
+enum DeliveryProblemStatus {
+  OPEN
+  RESOLVED
+  CANCELLED
+}
+
+model DeliveryProblemReport {
+  id               String                @id @default(uuid())
+  orderId          String                @map("order_id")
+  reportedByUserId String                @map("reported_by_user_id")
+  type             DeliveryProblemType
+  status           DeliveryProblemStatus @default(OPEN)
+  description      String
+
+  order          Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reportedByUser User  @relation("DeliveryProblemReporter", fields: [reportedByUserId], references: [id], onDelete: Cascade)
+
+  resolvedAt DateTime? @map("resolved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId], name: "idx_delivery_problem_reports_order_id")
+  @@index([reportedByUserId], name: "idx_delivery_problem_reports_reported_by_user_id")
+  @@index([status], name: "idx_delivery_problem_reports_status")
+  @@map("delivery_problem_reports")
+}
+
+// NOTIFICATIONS
+
+enum NotificationType {
+  ORDER_CREATED
+  ORDER_STATUS_CHANGED
+  ORDER_ASSIGNED
+  PAYMENT_STATUS_CHANGED
+  RESTAURANT_VERIFICATION_CHANGED
+  COURIER_VERIFICATION_CHANGED
+  DELIVERY_PROBLEM_CREATED
+  SYSTEM
+}
+
+model Notification {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  type  NotificationType
+  title String
+  body  String
+  data  Json?
+
+  readAt DateTime? @map("read_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId], name: "idx_notifications_user_id")
+  @@index([userId, readAt], name: "idx_notifications_user_id_read_at")
+  @@index([type], name: "idx_notifications_type")
+  @@map("notifications")
+}
