@@ -21,13 +21,13 @@ async function bootstrap() {
     include: [IamModule],
   });
 
-  // setupModuleSwagger(app, {
-  //   path: 'customer/docs',
-  //   title: 'CUSTOMER API',
-  //   description: 'Customers API documentation',
-  //   version: '1.0',
-  //   include: [CustomersModule],
-  // })
+  setupModuleSwagger(app, {
+    path: 'customer/docs',
+    title: 'CUSTOMER API',
+    description: 'Customers API documentation',
+    version: '1.0',
+    include: [CustomersModule],
+  })
 
   const configService = app.get(ConfigService);
   const port = configService.getOrThrow<number>("app.port");

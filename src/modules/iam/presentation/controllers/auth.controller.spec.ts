@@ -91,7 +91,7 @@ describe("AuthController", () => {
     it("delegates loginWithGoogle", async () => {
         await controller.loginWithGoogle(
             {email: "User@Example.com", deviceName: "browser"} as never,
-            buildRequest({headers: {"user-agent": ["mobile", "ignored"]}}),
+            buildRequest({headers: {"user-agent": "mobile"}}),
         );
 
         expect(loginWithGoogleUseCase.execute).toHaveBeenCalledWith(

@@ -3,7 +3,7 @@ import {UUID} from "../../../../shared/domain/value-objects/uuid.vo";
 export type AccountSnapshot = {
     id: string;
     status: "ACTIVE" | "BLOCKED" | "DELETED";
-    role: "CUSTOMER" | "PROVIDER" | "ADMIN";
+    role: "CUSTOMER" | "RESTAURANT_MANAGER" | "COURIER" | "ADMIN" | "PROVIDER";
 };
 
 export const ACCOUNT_ACCESS_READER = Symbol("ACCOUNT_ACCESS_READER");
