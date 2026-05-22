@@ -1,0 +1,61 @@
+import { Module } from '@nestjs/common';
+import { RestaurantsModule } from '../restaurants/restaurants.module';
+import { MENU_CATEGORY_REPOSITORY } from './application/ports/menu-category.repository.port';
+import { MENU_ITEM_REPOSITORY } from './application/ports/menu-item.repository.port';
+import { CATALOG_READER } from './application/ports/catalog-reader.port';
+import { DOMAIN_EVENT_PUBLISHER } from '../../shared/domain/events/domain-event-publisher.port';
+import { PrismaMenuCategoryRepository } from './infrastructure/persistence/prisma-menu-category.repository';
+import { PrismaMenuItemRepository } from './infrastructure/persistence/prisma-menu-item.repository';
+import { PrismaCatalogReader } from './infrastructure/readers/prisma-catalog-reader';
+import { NoopDomainEventPublisher } from '../../shared/infrastructure/events/noop-domain-event-publisher';
+import { CreateMenuCategoryUseCase } from './application/use-cases/create-menu-category/create-menu-category.use-case';
+import { UpdateMenuCategoryUseCase } from './application/use-cases/update-menu-category/update-menu-category.use-case';
+import { DeleteMenuCategoryUseCase } from './application/use-cases/delete-menu-category/delete-menu-category.use-case';
+import { CreateMenuItemUseCase } from './application/use-cases/create-menu-item/create-menu-item.use-case';
+import { UpdateMenuItemUseCase } from './application/use-cases/update-menu-item/update-menu-item.use-case';
+import { ChangeMenuItemStatusUseCase } from './application/use-cases/change-menu-item-status/change-menu-item-status.use-case';
+import { DeleteMenuItemUseCase } from './application/use-cases/delete-menu-item/delete-menu-item.use-case';
+import { GetRestaurantCatalogUseCase } from './application/use-cases/get-restaurant-catalog/get-restaurant-catalog.use-case';
+import { GetPublicRestaurantCatalogUseCase } from './application/use-cases/get-public-restaurant-catalog/get-public-restaurant-catalog.use-case';
+import { MenuCategoriesController } from './presentation/http/menu-categories.controller';
+import { MenuItemsController } from './presentation/http/menu-items.controller';
+import { ManagerCatalogController } from './presentation/http/manager-catalog.controller';
+import { PublicCatalogController } from './presentation/http/public-catalog.controller';
+
+@Module({
+    imports: [RestaurantsModule],
+    controllers: [
+        MenuCategoriesController,
+        MenuItemsController,
+        ManagerCatalogController,
+        PublicCatalogController,
+    ],
+    providers: [
+        {
+            provide: MENU_CATEGORY_REPOSITORY,
+            useClass: PrismaMenuCategoryRepository,
+        },
+        {
+            provide: MENU_ITEM_REPOSITORY,
+            useClass: PrismaMenuItemRepository,
+        },
+        {
+            provide: CATALOG_READER,
+            useClass: PrismaCatalogReader,
+        },
+        {
+            provide: DOMAIN_EVENT_PUBLISHER,
+            useClass: NoopDomainEventPublisher,
+        },
+        CreateMenuCategoryUseCase,
+        UpdateMenuCategoryUseCase,
+        DeleteMenuCategoryUseCase,
+        CreateMenuItemUseCase,
+        UpdateMenuItemUseCase,
+        ChangeMenuItemStatusUseCase,
+        DeleteMenuItemUseCase,
+        GetRestaurantCatalogUseCase,
+        GetPublicRestaurantCatalogUseCase,
+    ],
+})
+export class CatalogModule {}
