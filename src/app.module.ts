@@ -10,6 +10,8 @@ import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { CouriersModule } from './modules/couriers/couriers.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import {DomainExceptionFilter} from "./shared/infrastructure/http/filters/domain-exception.filter";
 import {GlobalExceptionFilter} from "./shared/infrastructure/http/filters/global-exception.filter";
 import {DomainExceptionMapper} from "./shared/infrastructure/http/mappers/domain-exception.mapper";
@@ -29,6 +31,8 @@ import {configurations} from "./config";
     CatalogModule,
     OrdersModule,
     CouriersModule,
+    PaymentsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [
