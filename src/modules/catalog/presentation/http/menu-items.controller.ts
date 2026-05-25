@@ -42,6 +42,7 @@ import { ChangeMenuItemStatusRequestDto } from './dto/change-menu-item-status.re
 @ApiBearerAuth('access-token')
 @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
 @UseGuards(JwtAuthGuard)
+@Controller()
 export class MenuItemsController {
     constructor(
         private readonly createMenuItemUseCase: CreateMenuItemUseCase,

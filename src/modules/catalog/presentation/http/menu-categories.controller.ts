@@ -39,6 +39,7 @@ import { UpdateMenuCategoryRequestDto } from './dto/update-menu-category.request
 @ApiBearerAuth('access-token')
 @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
 @UseGuards(JwtAuthGuard)
+@Controller()
 export class MenuCategoriesController {
     constructor(
         private readonly createMenuCategoryUseCase: CreateMenuCategoryUseCase,

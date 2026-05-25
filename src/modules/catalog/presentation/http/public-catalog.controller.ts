@@ -12,6 +12,7 @@ import { RestaurantCatalogResponseDto } from './dto/restaurant-catalog.response.
 import type { CatalogReadModel } from '../../application/ports/catalog-reader.port';
 
 @ApiTags('Catalog — Public')
+@Controller()
 export class PublicCatalogController {
     constructor(
         private readonly getPublicRestaurantCatalogUseCase: GetPublicRestaurantCatalogUseCase,

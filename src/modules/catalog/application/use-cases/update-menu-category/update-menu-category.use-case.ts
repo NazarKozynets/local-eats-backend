@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { UUID } from '../../../../../shared/domain/value-objects/uuid.vo';
 import { MenuCategoryName } from '../../../domain/value-objects/menu-category-name.vo';
 import { MenuCategoryNotFoundError } from '../../../domain/errors/menu-category-not-found.error';
@@ -16,6 +16,8 @@ import {
     DOMAIN_EVENT_PUBLISHER,
     type DomainEventPublisher,
 } from '../../../../../shared/domain/events/domain-event-publisher.port';
+import { CACHE_SERVICE } from '../../../../../shared/infrastructure/redis/redis.tokens';
+import type { CachePort } from '../../../../../shared/infrastructure/redis/cache.port';
 import type { UpdateMenuCategoryCommand } from './update-menu-category.command';
 
 @Injectable()
@@ -27,6 +29,8 @@ export class UpdateMenuCategoryUseCase {
         private readonly restaurantAccessReader: RestaurantAccessReader,
         @Inject(DOMAIN_EVENT_PUBLISHER)
         private readonly eventPublisher: DomainEventPublisher,
+        @Optional() @Inject(CACHE_SERVICE)
+        private readonly cacheService?: CachePort,
     ) {}
 
     async execute(command: UpdateMenuCategoryCommand): Promise<void> {
@@ -65,5 +69,6 @@ export class UpdateMenuCategoryUseCase {
                 command.currentUserId,
             ),
         ]);
+        await this.cacheService?.delete(`catalog:public:${category.restaurantId.value}`);
     }
 }

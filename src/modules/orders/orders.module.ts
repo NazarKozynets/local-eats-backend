@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { IamModule } from '../iam/iam.module';
 import { RestaurantsModule } from '../restaurants/restaurants.module';
 import { ORDER_REPOSITORY } from './application/ports/order.repository.port';
 import { ORDER_STATUS_HISTORY_REPOSITORY } from './application/ports/order-status-history.repository.port';
@@ -27,7 +28,7 @@ import { CustomerOrdersController } from './presentation/http/customer-orders.co
 import { RestaurantOrdersController } from './presentation/http/restaurant-orders.controller';
 
 @Module({
-    imports: [RestaurantsModule],
+    imports: [IamModule, RestaurantsModule],
     controllers: [CustomerOrdersController, RestaurantOrdersController],
     providers: [
         { provide: ORDER_REPOSITORY, useClass: PrismaOrderRepository },

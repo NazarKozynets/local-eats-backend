@@ -11,6 +11,7 @@ import {
 import {
     createMockCatalogReader,
     createMockRestaurantAccessReader,
+    createMockCacheService,
 } from '../../../__tests__/_helpers/mocks';
 
 describe('GetPublicRestaurantCatalogUseCase', () => {
@@ -61,28 +62,36 @@ describe('GetPublicRestaurantCatalogUseCase', () => {
         GetPublicRestaurantCatalogCommand.create({ restaurantId: TEST_RESTAURANT_ID });
 
     it('throws RestaurantNotAvailableForPublicCatalogError when restaurant is not active', async () => {
+        // Arrange
         restaurantAccessReader.existsActiveRestaurant.mockResolvedValue(false);
 
+        // Act & Assert
         await expect(useCase.execute(command())).rejects.toBeInstanceOf(
             RestaurantNotAvailableForPublicCatalogError,
         );
     });
 
     it('returns public catalog for active restaurant', async () => {
+        // Arrange
         restaurantAccessReader.existsActiveRestaurant.mockResolvedValue(true);
         catalogReader.getPublicCatalog.mockResolvedValue(mockPublicCatalog);
 
+        // Act
         const result = await useCase.execute(command());
 
+        // Assert
         expect(result).toEqual(mockPublicCatalog);
     });
 
     it('excludes HIDDEN items (only AVAILABLE and UNAVAILABLE visible)', async () => {
+        // Arrange
         restaurantAccessReader.existsActiveRestaurant.mockResolvedValue(true);
         catalogReader.getPublicCatalog.mockResolvedValue(mockPublicCatalog);
 
+        // Act
         const result = await useCase.execute(command());
 
+        // Assert
         const allItems = [
             ...result.categories.flatMap((c) => c.items),
             ...result.uncategorizedItems,
@@ -91,11 +100,56 @@ describe('GetPublicRestaurantCatalogUseCase', () => {
     });
 
     it('delegates to catalogReader.getPublicCatalog', async () => {
+        // Arrange
         restaurantAccessReader.existsActiveRestaurant.mockResolvedValue(true);
         catalogReader.getPublicCatalog.mockResolvedValue(mockPublicCatalog);
 
+        // Act
         await useCase.execute(command());
 
+        // Assert
         expect(catalogReader.getPublicCatalog).toHaveBeenCalledWith(TEST_RESTAURANT_ID);
+    });
+
+    describe('with cache service', () => {
+        let cacheService: ReturnType<typeof createMockCacheService>;
+
+        beforeEach(() => {
+            cacheService = createMockCacheService();
+            useCase = new GetPublicRestaurantCatalogUseCase(
+                catalogReader,
+                restaurantAccessReader,
+                cacheService,
+            );
+        });
+
+        it('uses cache remember with correct key and TTL', async () => {
+            // Arrange
+            restaurantAccessReader.existsActiveRestaurant.mockResolvedValue(true);
+            cacheService.remember.mockResolvedValue(mockPublicCatalog);
+
+            // Act
+            await useCase.execute(command());
+
+            // Assert
+            expect(cacheService.remember).toHaveBeenCalledWith(
+                `catalog:public:${TEST_RESTAURANT_ID}`,
+                60,
+                expect.any(Function),
+            );
+        });
+
+        it('returns cached result when cache hits', async () => {
+            // Arrange
+            restaurantAccessReader.existsActiveRestaurant.mockResolvedValue(true);
+            cacheService.remember.mockResolvedValue(mockPublicCatalog);
+
+            // Act
+            const result = await useCase.execute(command());
+
+            // Assert
+            expect(result).toEqual(mockPublicCatalog);
+            expect(catalogReader.getPublicCatalog).not.toHaveBeenCalled();
+        });
     });
 });

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { UUID } from '../../../../../shared/domain/value-objects/uuid.vo';
 import { MenuItem } from '../../../domain/entities/menu-item.entity';
 import { MenuItemName } from '../../../domain/value-objects/menu-item-name.vo';
@@ -23,6 +23,8 @@ import {
     DOMAIN_EVENT_PUBLISHER,
     type DomainEventPublisher,
 } from '../../../../../shared/domain/events/domain-event-publisher.port';
+import { CACHE_SERVICE } from '../../../../../shared/infrastructure/redis/redis.tokens';
+import type { CachePort } from '../../../../../shared/infrastructure/redis/cache.port';
 import type { CreateMenuItemCommand } from './create-menu-item.command';
 
 @Injectable()
@@ -36,6 +38,8 @@ export class CreateMenuItemUseCase {
         private readonly restaurantAccessReader: RestaurantAccessReader,
         @Inject(DOMAIN_EVENT_PUBLISHER)
         private readonly eventPublisher: DomainEventPublisher,
+        @Optional() @Inject(CACHE_SERVICE)
+        private readonly cacheService?: CachePort,
     ) {}
 
     async execute(command: CreateMenuItemCommand): Promise<void> {
@@ -79,5 +83,6 @@ export class CreateMenuItemUseCase {
         await this.eventPublisher.publishAll([
             new MenuItemCreatedEvent(command.restaurantId, item.id.value, command.currentUserId),
         ]);
+        await this.cacheService?.delete(`catalog:public:${command.restaurantId}`);
     }
 }

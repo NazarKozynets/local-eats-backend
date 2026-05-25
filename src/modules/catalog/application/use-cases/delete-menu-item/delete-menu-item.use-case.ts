@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { UUID } from '../../../../../shared/domain/value-objects/uuid.vo';
 import { MenuItemNotFoundError } from '../../../domain/errors/menu-item-not-found.error';
 import { RestaurantCatalogAccessDeniedError } from '../../../domain/errors/restaurant-catalog-access-denied.error';
@@ -15,6 +15,8 @@ import {
     DOMAIN_EVENT_PUBLISHER,
     type DomainEventPublisher,
 } from '../../../../../shared/domain/events/domain-event-publisher.port';
+import { CACHE_SERVICE } from '../../../../../shared/infrastructure/redis/redis.tokens';
+import type { CachePort } from '../../../../../shared/infrastructure/redis/cache.port';
 import type { DeleteMenuItemCommand } from './delete-menu-item.command';
 
 @Injectable()
@@ -26,6 +28,8 @@ export class DeleteMenuItemUseCase {
         private readonly restaurantAccessReader: RestaurantAccessReader,
         @Inject(DOMAIN_EVENT_PUBLISHER)
         private readonly eventPublisher: DomainEventPublisher,
+        @Optional() @Inject(CACHE_SERVICE)
+        private readonly cacheService?: CachePort,
     ) {}
 
     async execute(command: DeleteMenuItemCommand): Promise<void> {
@@ -50,5 +54,6 @@ export class DeleteMenuItemUseCase {
         await this.eventPublisher.publishAll([
             new MenuItemDeletedEvent(item.restaurantId.value, item.id.value, command.currentUserId),
         ]);
+        await this.cacheService?.delete(`catalog:public:${item.restaurantId.value}`);
     }
 }

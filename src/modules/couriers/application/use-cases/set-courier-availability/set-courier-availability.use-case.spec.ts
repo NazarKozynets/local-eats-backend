@@ -19,7 +19,7 @@ describe('SetCourierAvailabilityUseCase', () => {
     let eventPublisher: ReturnType<typeof createMockEventPublisher>;
     let useCase: SetCourierAvailabilityUseCase;
 
-    const command = (availabilityStatus = CourierAvailabilityStatus.ONLINE) => ({
+    const command = (availabilityStatus: CourierAvailabilityStatus = CourierAvailabilityStatus.ONLINE) => ({
         currentUserId: TEST_USER_ID,
         availabilityStatus,
     });

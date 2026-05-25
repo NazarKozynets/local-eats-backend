@@ -20,6 +20,7 @@ import type { CatalogReadModel } from '../../application/ports/catalog-reader.po
 @ApiBearerAuth('access-token')
 @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
 @UseGuards(JwtAuthGuard)
+@Controller()
 export class ManagerCatalogController {
     constructor(
         private readonly getRestaurantCatalogUseCase: GetRestaurantCatalogUseCase,

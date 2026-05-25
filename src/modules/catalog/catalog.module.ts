@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { IamModule } from '../iam/iam.module';
 import { RestaurantsModule } from '../restaurants/restaurants.module';
 import { MENU_CATEGORY_REPOSITORY } from './application/ports/menu-category.repository.port';
 import { MENU_ITEM_REPOSITORY } from './application/ports/menu-item.repository.port';
@@ -23,7 +24,7 @@ import { ManagerCatalogController } from './presentation/http/manager-catalog.co
 import { PublicCatalogController } from './presentation/http/public-catalog.controller';
 
 @Module({
-    imports: [RestaurantsModule],
+    imports: [IamModule, RestaurantsModule],
     controllers: [
         MenuCategoriesController,
         MenuItemsController,

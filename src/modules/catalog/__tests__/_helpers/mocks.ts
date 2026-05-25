@@ -3,6 +3,7 @@ import type { MenuItemRepository } from '../../application/ports/menu-item.repos
 import type { CatalogReader } from '../../application/ports/catalog-reader.port';
 import type { RestaurantAccessReader } from '../../../restaurants/application/ports/restaurant-access-reader.port';
 import type { DomainEventPublisher } from '../../../../shared/domain/events/domain-event-publisher.port';
+import type { CachePort } from '../../../../shared/infrastructure/redis/cache.port';
 
 export function createMockMenuCategoryRepository(): jest.Mocked<MenuCategoryRepository> {
     return {
@@ -43,5 +44,15 @@ export function createMockRestaurantAccessReader(): jest.Mocked<RestaurantAccess
 export function createMockEventPublisher(): jest.Mocked<DomainEventPublisher> {
     return {
         publishAll: jest.fn(),
+    };
+}
+
+export function createMockCacheService(): jest.Mocked<CachePort> {
+    return {
+        get: jest.fn(),
+        set: jest.fn(),
+        delete: jest.fn(),
+        deleteByPattern: jest.fn(),
+        remember: jest.fn(),
     };
 }

@@ -16,8 +16,12 @@ services:
     image: redis:7
     container_name: localeats-redis
     restart: always
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
+    volumes:
+      - localeats_redis_data:/data
 
 volumes:
   localeats_postgres_data:
+  localeats_redis_data:
