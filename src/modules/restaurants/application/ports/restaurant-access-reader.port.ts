@@ -7,4 +7,5 @@ export interface RestaurantAccessReader {
     getStaffRole(userId: string, restaurantId: string): Promise<RestaurantStaffRole | null>;
     isRestaurantActive(restaurantId: string): Promise<boolean>;
     existsActiveRestaurant(restaurantId: string): Promise<boolean>;
+    findOwnerUserIds(restaurantId: string): Promise<string[]>;
 }

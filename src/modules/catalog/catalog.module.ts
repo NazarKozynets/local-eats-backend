@@ -1,14 +1,14 @@
-import { Module } from '@nestjs/common';
+import { Inject, Module, OnModuleInit } from '@nestjs/common';
 import { IamModule } from '../iam/iam.module';
 import { RestaurantsModule } from '../restaurants/restaurants.module';
 import { MENU_CATEGORY_REPOSITORY } from './application/ports/menu-category.repository.port';
 import { MENU_ITEM_REPOSITORY } from './application/ports/menu-item.repository.port';
 import { CATALOG_READER } from './application/ports/catalog-reader.port';
-import { DOMAIN_EVENT_PUBLISHER } from '../../shared/domain/events/domain-event-publisher.port';
 import { PrismaMenuCategoryRepository } from './infrastructure/persistence/prisma-menu-category.repository';
 import { PrismaMenuItemRepository } from './infrastructure/persistence/prisma-menu-item.repository';
 import { PrismaCatalogReader } from './infrastructure/readers/prisma-catalog-reader';
-import { NoopDomainEventPublisher } from '../../shared/infrastructure/events/noop-domain-event-publisher';
+import { InProcessDomainEventPublisher } from '../../shared/infrastructure/events/in-process-domain-event-publisher';
+import { OnRestaurantStatusChangedHandler } from './application/event-handlers/on-restaurant-status-changed.handler';
 import { CreateMenuCategoryUseCase } from './application/use-cases/create-menu-category/create-menu-category.use-case';
 import { UpdateMenuCategoryUseCase } from './application/use-cases/update-menu-category/update-menu-category.use-case';
 import { DeleteMenuCategoryUseCase } from './application/use-cases/delete-menu-category/delete-menu-category.use-case';
@@ -22,6 +22,11 @@ import { MenuCategoriesController } from './presentation/http/menu-categories.co
 import { MenuItemsController } from './presentation/http/menu-items.controller';
 import { ManagerCatalogController } from './presentation/http/manager-catalog.controller';
 import { PublicCatalogController } from './presentation/http/public-catalog.controller';
+import { RestaurantApprovedEvent } from '../restaurants/domain/events/restaurant-approved.event';
+import { RestaurantRejectedEvent } from '../restaurants/domain/events/restaurant-rejected.event';
+import { RestaurantPausedEvent } from '../restaurants/domain/events/restaurant-paused.event';
+import { RestaurantActivatedEvent } from '../restaurants/domain/events/restaurant-activated.event';
+import { RestaurantBlockedEvent } from '../restaurants/domain/events/restaurant-blocked.event';
 
 @Module({
     imports: [IamModule, RestaurantsModule],
@@ -44,10 +49,7 @@ import { PublicCatalogController } from './presentation/http/public-catalog.cont
             provide: CATALOG_READER,
             useClass: PrismaCatalogReader,
         },
-        {
-            provide: DOMAIN_EVENT_PUBLISHER,
-            useClass: NoopDomainEventPublisher,
-        },
+        OnRestaurantStatusChangedHandler,
         CreateMenuCategoryUseCase,
         UpdateMenuCategoryUseCase,
         DeleteMenuCategoryUseCase,
@@ -59,4 +61,18 @@ import { PublicCatalogController } from './presentation/http/public-catalog.cont
         GetPublicRestaurantCatalogUseCase,
     ],
 })
-export class CatalogModule {}
+export class CatalogModule implements OnModuleInit {
+    constructor(
+        @Inject(InProcessDomainEventPublisher)
+        private readonly publisher: InProcessDomainEventPublisher,
+        private readonly onRestaurantStatusChanged: OnRestaurantStatusChangedHandler,
+    ) {}
+
+    onModuleInit(): void {
+        this.publisher.subscribe(RestaurantApprovedEvent, e => this.onRestaurantStatusChanged.handle(e));
+        this.publisher.subscribe(RestaurantRejectedEvent, e => this.onRestaurantStatusChanged.handle(e));
+        this.publisher.subscribe(RestaurantPausedEvent, e => this.onRestaurantStatusChanged.handle(e));
+        this.publisher.subscribe(RestaurantActivatedEvent, e => this.onRestaurantStatusChanged.handle(e));
+        this.publisher.subscribe(RestaurantBlockedEvent, e => this.onRestaurantStatusChanged.handle(e));
+    }
+}

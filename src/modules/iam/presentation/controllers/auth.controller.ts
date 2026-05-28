@@ -1,4 +1,4 @@
-import {Body, Controller, Post, Req} from "@nestjs/common";
+import {Body, Controller, HttpCode, HttpStatus, Post, Req} from "@nestjs/common";
 import {
     ApiBadRequestResponse,
     ApiBody,
@@ -94,6 +94,7 @@ export class AuthController {
     }
 
     @Post('login')
+    @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'Login with email or phone and password',
         description: 'Authenticates a user using email or phone number and password. Returns access and refresh tokens.',

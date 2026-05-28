@@ -13,6 +13,7 @@ import {
     createMockMenuCategoryRepository,
     createMockRestaurantAccessReader,
     createMockEventPublisher,
+    createMockCacheService,
 } from '../../../__tests__/_helpers/mocks';
 
 describe('DeleteMenuCategoryUseCase', () => {
@@ -81,5 +82,24 @@ describe('DeleteMenuCategoryUseCase', () => {
         expect(eventPublisher.publishAll).toHaveBeenCalledWith(
             expect.arrayContaining([expect.any(MenuCategoryDeletedEvent)]),
         );
+    });
+
+    it('invalidates public catalog cache after successful deletion', async () => {
+        const cacheService = createMockCacheService();
+        cacheService.delete.mockResolvedValue(undefined);
+        const useCaseWithCache = new DeleteMenuCategoryUseCase(
+            menuCategoryRepository,
+            restaurantAccessReader,
+            eventPublisher,
+            cacheService,
+        );
+        const category = buildMenuCategory();
+        menuCategoryRepository.findById.mockResolvedValue(category);
+        restaurantAccessReader.canManageRestaurant.mockResolvedValue(true);
+        menuCategoryRepository.hasItems.mockResolvedValue(false);
+
+        await useCaseWithCache.execute(command());
+
+        expect(cacheService.delete).toHaveBeenCalledWith(`catalog:public:${category.restaurantId.value}`);
     });
 });

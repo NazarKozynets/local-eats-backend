@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { IamModule } from './modules/iam/iam.module';
 import { CustomersModule } from './modules/customers/customers.module';
@@ -7,10 +8,13 @@ import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { CouriersModule } from './modules/couriers/couriers.module';
+import { DeliveriesModule } from './modules/deliveries/deliveries.module';
 import { setupModuleSwagger } from './shared/infrastructure/swagger/setup-module-swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   app.enableCors({
     origin: true,
@@ -63,6 +67,14 @@ async function bootstrap() {
     description: 'Couriers API documentation',
     version: '1.0',
     include: [CouriersModule],
+  });
+
+  setupModuleSwagger(app, {
+    path: 'deliveries/docs',
+    title: 'Deliveries API',
+    description: 'Deliveries API documentation',
+    version: '1.0',
+    include: [DeliveriesModule],
   });
 
   const configService = app.get(ConfigService);

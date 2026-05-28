@@ -13,6 +13,7 @@ import {
     createMockMenuItemRepository,
     createMockRestaurantAccessReader,
     createMockEventPublisher,
+    createMockCacheService,
 } from '../../../__tests__/_helpers/mocks';
 
 describe('ChangeMenuItemStatusUseCase', () => {
@@ -97,5 +98,23 @@ describe('ChangeMenuItemStatusUseCase', () => {
         expect(eventPublisher.publishAll).toHaveBeenCalledWith(
             expect.arrayContaining([expect.any(MenuItemStatusChangedEvent)]),
         );
+    });
+
+    it('invalidates public catalog cache after status change', async () => {
+        const cacheService = createMockCacheService();
+        cacheService.delete.mockResolvedValue(undefined);
+        const useCaseWithCache = new ChangeMenuItemStatusUseCase(
+            menuItemRepository,
+            restaurantAccessReader,
+            eventPublisher,
+            cacheService,
+        );
+        const item = buildMenuItem();
+        menuItemRepository.findById.mockResolvedValue(item);
+        restaurantAccessReader.canManageRestaurant.mockResolvedValue(true);
+
+        await useCaseWithCache.execute(command(MenuItemStatus.UNAVAILABLE));
+
+        expect(cacheService.delete).toHaveBeenCalledWith(`catalog:public:${item.restaurantId.value}`);
     });
 });

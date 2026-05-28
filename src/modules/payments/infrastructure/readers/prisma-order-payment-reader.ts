@@ -22,6 +22,7 @@ export class PrismaOrderPaymentReader implements OrderPaymentReader {
                 paymentMethod: true,
                 paymentStatus: true,
                 status: true,
+                customer: { select: { userId: true } },
             },
         });
 
@@ -30,6 +31,7 @@ export class PrismaOrderPaymentReader implements OrderPaymentReader {
         return {
             orderId: order.id,
             customerId: order.customerId,
+            customerUserId: order.customer.userId,
             restaurantId: order.restaurantId,
             totalPrice: Number(order.totalPrice),
             currency: order.currency as Currency,

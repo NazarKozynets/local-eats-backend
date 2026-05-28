@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './shared/infrastructure/database/database.module';
 import { RedisModule } from './shared/infrastructure/redis/redis.module';
+import { SharedEventsModule } from './shared/infrastructure/events/shared-events.module';
 import { IamModule } from './modules/iam/iam.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { RestaurantsModule } from './modules/restaurants/restaurants.module';
@@ -16,6 +17,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { CommunicationModule } from './modules/communication/communication.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { DeliveriesModule } from './modules/deliveries/deliveries.module';
 import {DomainExceptionFilter} from "./shared/infrastructure/http/filters/domain-exception.filter";
 import {GlobalExceptionFilter} from "./shared/infrastructure/http/filters/global-exception.filter";
 import {DomainExceptionMapper} from "./shared/infrastructure/http/mappers/domain-exception.mapper";
@@ -30,6 +32,7 @@ import {configurations} from "./config";
     }),
     DatabaseModule,
     RedisModule,
+    SharedEventsModule,
     IamModule,
     CustomersModule,
     RestaurantsModule,
@@ -41,6 +44,7 @@ import {configurations} from "./config";
     ReviewsModule,
     CommunicationModule,
     AdminModule,
+    DeliveriesModule,
   ],
   controllers: [AppController],
   providers: [

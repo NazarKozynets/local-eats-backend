@@ -4,12 +4,10 @@ import { REVIEW_REPOSITORY } from './application/ports/review.repository.port';
 import { ORDER_REVIEW_READER } from './application/ports/order-review-reader.port';
 import { RESTAURANT_RATING_WRITER } from './application/ports/restaurant-rating-writer.port';
 import { COURIER_RATING_WRITER } from './application/ports/courier-rating-writer.port';
-import { DOMAIN_EVENT_PUBLISHER } from '../../shared/domain/events/domain-event-publisher.port';
 import { PrismaReviewRepository } from './infrastructure/persistence/prisma-review.repository';
 import { PrismaOrderReviewReader } from './infrastructure/readers/prisma-order-review-reader';
 import { PrismaRestaurantRatingWriter } from './infrastructure/writers/prisma-restaurant-rating-writer';
 import { PrismaCourierRatingWriter } from './infrastructure/writers/prisma-courier-rating-writer';
-import { NoopDomainEventPublisher } from '../../shared/infrastructure/events/noop-domain-event-publisher';
 import { CreateRestaurantReviewUseCase } from './application/use-cases/create-restaurant-review/create-restaurant-review.use-case';
 import { CreateCourierReviewUseCase } from './application/use-cases/create-courier-review/create-courier-review.use-case';
 import { GetRestaurantReviewsUseCase } from './application/use-cases/get-restaurant-reviews/get-restaurant-reviews.use-case';
@@ -31,7 +29,6 @@ import { AdminReviewsController } from './presentation/http/admin-reviews.contro
         { provide: ORDER_REVIEW_READER, useClass: PrismaOrderReviewReader },
         { provide: RESTAURANT_RATING_WRITER, useClass: PrismaRestaurantRatingWriter },
         { provide: COURIER_RATING_WRITER, useClass: PrismaCourierRatingWriter },
-        { provide: DOMAIN_EVENT_PUBLISHER, useClass: NoopDomainEventPublisher },
         CreateRestaurantReviewUseCase,
         CreateCourierReviewUseCase,
         GetRestaurantReviewsUseCase,

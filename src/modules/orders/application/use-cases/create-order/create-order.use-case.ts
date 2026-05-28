@@ -79,7 +79,7 @@ export class CreateOrderUseCase {
         private readonly eventPublisher: DomainEventPublisher,
     ) {}
 
-    async execute(command: CreateOrderCommand): Promise<void> {
+    async execute(command: CreateOrderCommand): Promise<{ orderId: string }> {
         if (command.items.length === 0) {
             throw new EmptyOrderError();
         }
@@ -202,5 +202,7 @@ export class CreateOrderUseCase {
                 command.currentUserId,
             ),
         ]);
+
+        return { orderId: order.id.value };
     }
 }

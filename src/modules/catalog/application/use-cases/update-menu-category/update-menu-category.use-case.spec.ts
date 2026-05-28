@@ -12,6 +12,7 @@ import {
     createMockMenuCategoryRepository,
     createMockRestaurantAccessReader,
     createMockEventPublisher,
+    createMockCacheService,
 } from '../../../__tests__/_helpers/mocks';
 
 describe('UpdateMenuCategoryUseCase', () => {
@@ -93,5 +94,23 @@ describe('UpdateMenuCategoryUseCase', () => {
         expect(eventPublisher.publishAll).toHaveBeenCalledWith(
             expect.arrayContaining([expect.any(MenuCategoryUpdatedEvent)]),
         );
+    });
+
+    it('invalidates public catalog cache after successful update', async () => {
+        const cacheService = createMockCacheService();
+        cacheService.delete.mockResolvedValue(undefined);
+        const useCaseWithCache = new UpdateMenuCategoryUseCase(
+            menuCategoryRepository,
+            restaurantAccessReader,
+            eventPublisher,
+            cacheService,
+        );
+        const category = buildMenuCategory();
+        menuCategoryRepository.findById.mockResolvedValue(category);
+        restaurantAccessReader.canManageRestaurant.mockResolvedValue(true);
+
+        await useCaseWithCache.execute(command({ name: 'New Name' }));
+
+        expect(cacheService.delete).toHaveBeenCalledWith(`catalog:public:${category.restaurantId.value}`);
     });
 });

@@ -38,6 +38,7 @@ export function createMockRestaurantAccessReader(): jest.Mocked<RestaurantAccess
         getStaffRole: jest.fn(),
         isRestaurantActive: jest.fn(),
         existsActiveRestaurant: jest.fn(),
+        findOwnerUserIds: jest.fn(),
     };
 }
 

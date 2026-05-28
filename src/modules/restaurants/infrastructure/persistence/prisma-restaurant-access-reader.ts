@@ -46,4 +46,13 @@ export class PrismaRestaurantAccessReader implements RestaurantAccessReader {
 
         return row !== null && row.status === 'ACTIVE';
     }
+
+    async findOwnerUserIds(restaurantId: string): Promise<string[]> {
+        const rows = await this.prisma.restaurantStaff.findMany({
+            where: { restaurantId, role: 'OWNER' },
+            select: { userId: true },
+        });
+
+        return rows.map(r => r.userId);
+    }
 }

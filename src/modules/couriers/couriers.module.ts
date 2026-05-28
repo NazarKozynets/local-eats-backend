@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { IamModule } from '../iam/iam.module';
 import { COURIER_PROFILE_REPOSITORY } from './application/ports/courier-profile.repository.port';
 import { COURIER_ACCESS_READER } from './application/ports/courier-access-reader.port';
-import { DOMAIN_EVENT_PUBLISHER } from '../../shared/domain/events/domain-event-publisher.port';
+import { COURIER_DELIVERY_WRITER } from './application/ports/courier-delivery-writer.port';
 import { PrismaCourierProfileRepository } from './infrastructure/persistence/prisma-courier-profile.repository';
 import { PrismaCourierAccessReader } from './infrastructure/readers/prisma-courier-access-reader';
-import { NoopDomainEventPublisher } from '../../shared/infrastructure/events/noop-domain-event-publisher';
+import { PrismaCourierDeliveryWriter } from './infrastructure/writers/prisma-courier-delivery-writer';
 import { CreateCourierProfileUseCase } from './application/use-cases/create-courier-profile/create-courier-profile.use-case';
 import { GetMyCourierProfileUseCase } from './application/use-cases/get-my-courier-profile/get-my-courier-profile.use-case';
 import { UpdateCourierProfileUseCase } from './application/use-cases/update-courier-profile/update-courier-profile.use-case';
@@ -34,8 +34,8 @@ import { AdminCouriersController } from './presentation/http/admin-couriers.cont
             useClass: PrismaCourierAccessReader,
         },
         {
-            provide: DOMAIN_EVENT_PUBLISHER,
-            useClass: NoopDomainEventPublisher,
+            provide: COURIER_DELIVERY_WRITER,
+            useClass: PrismaCourierDeliveryWriter,
         },
         CreateCourierProfileUseCase,
         GetMyCourierProfileUseCase,
@@ -50,6 +50,6 @@ import { AdminCouriersController } from './presentation/http/admin-couriers.cont
         UpdateCourierLocationUseCase,
         GetAvailableCouriersUseCase,
     ],
-    exports: [COURIER_ACCESS_READER],
+    exports: [COURIER_ACCESS_READER, COURIER_DELIVERY_WRITER],
 })
 export class CouriersModule {}

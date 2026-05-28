@@ -102,8 +102,8 @@ export class CustomerOrdersController {
     @ApiNotFoundResponse({ description: 'Customer profile or delivery address not found' })
     @ApiForbiddenResponse({ description: 'Delivery address does not belong to your profile' })
     @ApiConflictResponse({ description: 'Restaurant not active or item not available' })
-    async create(@CurrentUser() user: AuthUser, @Body() dto: CreateOrderRequestDto): Promise<void> {
-        return this.createOrderUseCase.execute(
+    async create(@CurrentUser() user: AuthUser, @Body() dto: CreateOrderRequestDto): Promise<{ id: string }> {
+        const result = await this.createOrderUseCase.execute(
             CreateOrderCommand.create({
                 currentUserId: user.userId,
                 restaurantId: dto.restaurantId,
@@ -117,6 +117,7 @@ export class CustomerOrdersController {
                 })),
             }),
         );
+        return { id: result.orderId };
     }
 
     @Get('orders/my')

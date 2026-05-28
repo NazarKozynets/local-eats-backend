@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import {TokenGenerator, TokenPayload} from "../../application/services/token-generator.port";
 import {JwtService, type JwtSignOptions} from "@nestjs/jwt";
 import {Injectable} from "@nestjs/common";
@@ -25,6 +26,7 @@ export class JwtTokenGenerator implements TokenGenerator {
             sub: payload.userId,
             role: payload.role,
             tokenType: 'refresh',
+            jti: randomUUID(),
         }, {
             secret: this.configService.getOrThrow<string>("jwt.refreshSecret"),
             expiresIn: this.getExpiresIn("jwt.refreshExpiresIn"),

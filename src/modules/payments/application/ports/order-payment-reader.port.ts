@@ -6,6 +6,7 @@ import type { OrderStatus } from '../../../orders/domain/enums/order-status.enum
 export type OrderPaymentInfo = {
     orderId: string;
     customerId: string;
+    customerUserId: string;
     restaurantId: string;
     totalPrice: number;
     currency: Currency;

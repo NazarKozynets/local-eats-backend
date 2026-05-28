@@ -6,6 +6,7 @@ import { Currency } from '../enums/currency.enum';
 import { InvalidOrderStatusTransitionError } from '../errors/invalid-order-status-transition.error';
 import { InvalidOrderCancellationError } from '../errors/invalid-order-cancellation.error';
 import { OrderAccessDeniedError } from '../errors/order-access-denied.error';
+import { OrderAlreadyHasCourierError } from '../errors/order-already-has-courier.error';
 import { EmptyOrderError } from '../errors/empty-order.error';
 import type { OrderItem } from './order-item.entity';
 
@@ -138,6 +139,66 @@ export class Order {
 
         this.props.status = OrderStatus.READY_FOR_PICKUP;
         this.props.readyAt = new Date();
+        this.touch();
+    }
+
+    assignCourier(courierId: UUID): void {
+        if (this.props.status !== OrderStatus.READY_FOR_PICKUP) {
+            throw new InvalidOrderStatusTransitionError(this.props.status, OrderStatus.ASSIGNED_TO_COURIER);
+        }
+        if (this.props.courierId !== null) {
+            throw new OrderAlreadyHasCourierError();
+        }
+        this.props.courierId = courierId;
+        this.props.status = OrderStatus.ASSIGNED_TO_COURIER;
+        this.touch();
+    }
+
+    unassignCourier(): void {
+        if (this.props.status !== OrderStatus.ASSIGNED_TO_COURIER) {
+            throw new InvalidOrderStatusTransitionError(this.props.status, OrderStatus.READY_FOR_PICKUP);
+        }
+        this.props.courierId = null;
+        this.props.status = OrderStatus.READY_FOR_PICKUP;
+        this.touch();
+    }
+
+    pickUp(now: Date): void {
+        if (this.props.status !== OrderStatus.ASSIGNED_TO_COURIER) {
+            throw new InvalidOrderStatusTransitionError(this.props.status, OrderStatus.PICKED_UP);
+        }
+        this.props.status = OrderStatus.PICKED_UP;
+        this.props.pickedUpAt = now;
+        this.touch();
+    }
+
+    startDelivering(): void {
+        if (this.props.status !== OrderStatus.PICKED_UP) {
+            throw new InvalidOrderStatusTransitionError(this.props.status, OrderStatus.DELIVERING);
+        }
+        this.props.status = OrderStatus.DELIVERING;
+        this.touch();
+    }
+
+    markDelivered(now: Date): void {
+        if (this.props.status !== OrderStatus.DELIVERING) {
+            throw new InvalidOrderStatusTransitionError(this.props.status, OrderStatus.DELIVERED);
+        }
+        this.props.status = OrderStatus.DELIVERED;
+        this.props.deliveredAt = now;
+        this.touch();
+    }
+
+    markProblem(): void {
+        const allowedStatuses: OrderStatus[] = [
+            OrderStatus.ASSIGNED_TO_COURIER,
+            OrderStatus.PICKED_UP,
+            OrderStatus.DELIVERING,
+        ];
+        if (!allowedStatuses.includes(this.props.status)) {
+            throw new InvalidOrderStatusTransitionError(this.props.status, OrderStatus.PROBLEM);
+        }
+        this.props.status = OrderStatus.PROBLEM;
         this.touch();
     }
 

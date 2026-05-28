@@ -2,10 +2,8 @@ import { Module } from '@nestjs/common';
 import { IamModule } from '../iam/iam.module';
 import { CUSTOMER_PROFILE_REPOSITORY } from './application/ports/customer-profile.repository.port';
 import { CUSTOMER_ADDRESS_REPOSITORY } from './application/ports/customer-address.repository.port';
-import { DOMAIN_EVENT_PUBLISHER } from '../../shared/domain/events/domain-event-publisher.port';
 import { PrismaCustomerProfileRepository } from './infrastructure/persistence/prisma-customer-profile.repository';
 import { PrismaCustomerAddressRepository } from './infrastructure/persistence/prisma-customer-address.repository';
-import { NoopDomainEventPublisher } from '../../shared/infrastructure/events/noop-domain-event-publisher';
 import { CreateCustomerProfileUseCase } from './application/use-cases/create-customer-profile/create-customer-profile.use-case';
 import { GetMyCustomerProfileUseCase } from './application/use-cases/get-my-customer-profile/get-my-customer-profile.use-case';
 import { UpdateCustomerProfileUseCase } from './application/use-cases/update-customer-profile/update-customer-profile.use-case';
@@ -28,10 +26,6 @@ import { CustomerAddressesController } from './presentation/controllers/customer
         {
             provide: CUSTOMER_ADDRESS_REPOSITORY,
             useClass: PrismaCustomerAddressRepository,
-        },
-        {
-            provide: DOMAIN_EVENT_PUBLISHER,
-            useClass: NoopDomainEventPublisher,
         },
         CreateCustomerProfileUseCase,
         GetMyCustomerProfileUseCase,

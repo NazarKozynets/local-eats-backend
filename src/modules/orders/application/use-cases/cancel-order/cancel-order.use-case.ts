@@ -9,9 +9,14 @@ import {
     type OrderRepository,
 } from '../../ports/order.repository.port';
 import {
+    CUSTOMER_ORDER_READER,
+    type CustomerOrderReader,
+} from '../../ports/customer-order-reader.port';
+import {
     DOMAIN_EVENT_PUBLISHER,
     type DomainEventPublisher,
 } from '../../../../../shared/domain/events/domain-event-publisher.port';
+import { OrderCustomerProfileNotFoundError } from '../../../domain/errors/order-customer-profile-not-found.error';
 import type { CancelOrderCommand } from './cancel-order.command';
 
 @Injectable()
@@ -19,11 +24,18 @@ export class CancelOrderUseCase {
     constructor(
         @Inject(ORDER_REPOSITORY)
         private readonly orderRepository: OrderRepository,
+        @Inject(CUSTOMER_ORDER_READER)
+        private readonly customerOrderReader: CustomerOrderReader,
         @Inject(DOMAIN_EVENT_PUBLISHER)
         private readonly eventPublisher: DomainEventPublisher,
     ) {}
 
     async execute(command: CancelOrderCommand): Promise<void> {
+        const profile = await this.customerOrderReader.getProfileByUserId(command.currentUserId);
+        if (!profile) {
+            throw new OrderCustomerProfileNotFoundError();
+        }
+
         const orderId = UUID.create(command.orderId);
         const order = await this.orderRepository.findById(orderId);
 
@@ -35,7 +47,7 @@ export class CancelOrderUseCase {
 
         // cancelByCustomer throws OrderAccessDeniedError if not the owner
         // and InvalidOrderCancellationError if not CREATED
-        order.cancelByCustomer(command.currentUserId, command.reason);
+        order.cancelByCustomer(profile.id, command.reason);
 
         await this.orderRepository.saveWithHistory(order, {
             status: OrderStatus.CANCELLED,

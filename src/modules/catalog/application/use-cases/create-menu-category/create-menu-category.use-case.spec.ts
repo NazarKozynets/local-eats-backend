@@ -12,6 +12,7 @@ import {
     createMockMenuCategoryRepository,
     createMockRestaurantAccessReader,
     createMockEventPublisher,
+    createMockCacheService,
 } from '../../../__tests__/_helpers/mocks';
 
 describe('CreateMenuCategoryUseCase', () => {
@@ -89,5 +90,22 @@ describe('CreateMenuCategoryUseCase', () => {
 
         expect(savedCategory.position).toBe(0);
         expect(savedCategory.isActive).toBe(true);
+    });
+
+    it('invalidates public catalog cache after successful creation', async () => {
+        const cacheService = createMockCacheService();
+        cacheService.delete.mockResolvedValue(undefined);
+        const useCaseWithCache = new CreateMenuCategoryUseCase(
+            menuCategoryRepository,
+            restaurantAccessReader,
+            eventPublisher,
+            cacheService,
+        );
+        restaurantAccessReader.canManageRestaurant.mockResolvedValue(true);
+        menuCategoryRepository.existsByNameInRestaurant.mockResolvedValue(false);
+
+        await useCaseWithCache.execute(command());
+
+        expect(cacheService.delete).toHaveBeenCalledWith(`catalog:public:${TEST_RESTAURANT_ID}`);
     });
 });
