@@ -16,6 +16,7 @@ import {
     createMockOrderPaymentReader,
     createMockOrderPaymentWriter,
     createMockEventPublisher,
+    createMockPaymentProvider,
 } from '../../../__tests__/_helpers/mocks';
 import {
     TEST_USER_ID,
@@ -26,6 +27,7 @@ import type { OrderPaymentInfo } from '../../ports/order-payment-reader.port';
 const MOCK_ORDER_INFO: OrderPaymentInfo = {
     orderId: TEST_ORDER_ID,
     customerId: '660e8400-e29b-41d4-a716-446655440001',
+    customerUserId: TEST_USER_ID,
     restaurantId: '770e8400-e29b-41d4-a716-446655440002',
     totalPrice: 20.0,
     currency: Currency.UAH,
@@ -40,6 +42,7 @@ describe('CreatePaymentUseCase', () => {
     let orderPaymentWriter: ReturnType<typeof createMockOrderPaymentWriter>;
     let eventPublisher: ReturnType<typeof createMockEventPublisher>;
     let providerSelector: PaymentProviderSelector;
+    let cashProvider: ReturnType<typeof createMockPaymentProvider>;
     let useCase: CreatePaymentUseCase;
 
     beforeEach(() => {
@@ -48,12 +51,16 @@ describe('CreatePaymentUseCase', () => {
         orderPaymentWriter = createMockOrderPaymentWriter();
         eventPublisher = createMockEventPublisher();
         providerSelector = new PaymentProviderSelector();
+        cashProvider = createMockPaymentProvider();
+        (cashProvider as any).providerName = PaymentProvider.CASH;
+        cashProvider.createPayment.mockResolvedValue({ providerPaymentId: null });
 
         useCase = new CreatePaymentUseCase(
             paymentRepository,
             orderPaymentReader,
             orderPaymentWriter,
             eventPublisher,
+            [cashProvider],
             providerSelector,
         );
 
@@ -78,6 +85,19 @@ describe('CreatePaymentUseCase', () => {
     });
 
     it('creates MOCK payment for CARD_ONLINE order', async () => {
+        const mockProvider = createMockPaymentProvider();
+        (mockProvider as any).providerName = PaymentProvider.MOCK;
+        mockProvider.createPayment.mockResolvedValue({ providerPaymentId: 'mock_123' });
+
+        useCase = new CreatePaymentUseCase(
+            paymentRepository,
+            orderPaymentReader,
+            orderPaymentWriter,
+            eventPublisher,
+            [cashProvider, mockProvider],
+            providerSelector,
+        );
+
         orderPaymentReader.getOrderPaymentInfo.mockResolvedValue({
             ...MOCK_ORDER_INFO,
             paymentMethod: PaymentMethod.CARD_ONLINE,
@@ -130,6 +150,14 @@ describe('CreatePaymentUseCase', () => {
 
         expect(eventPublisher.publishAll).toHaveBeenCalledWith(
             expect.arrayContaining([expect.any(PaymentCreatedEvent)]),
+        );
+    });
+
+    it('calls provider.createPayment() and stores providerPaymentId', async () => {
+        await useCase.execute(command());
+
+        expect(cashProvider.createPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ orderId: TEST_ORDER_ID, amount: 20.0 }),
         );
     });
 });

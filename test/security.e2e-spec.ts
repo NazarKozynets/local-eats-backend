@@ -88,13 +88,10 @@ describe('Security boundaries (e2e)', () => {
 
         it('customer cannot update catalog (manager action)', async () => {
             await request(httpServer)
-                .post(`/restaurants/${restaurantId}/categories`)
+                .post(`/restaurants/${restaurantId}/catalog/categories`)
                 .set(bearerHeader(customerToken))
                 .send({ name: 'Hack Category' })
-                // Either 403 (access denied) or 404 (not a manager)
-                .expect((res) => {
-                    expect([403, 404]).toContain(res.status);
-                });
+                .expect(403);
         });
     });
 

@@ -6,9 +6,7 @@
  *  - Duplicate payment is rejected
  *  - Fetch payment by order
  *
- * NOTE: Reviews can only be created for DELIVERED orders, which requires the
- * Deliveries module (currently not implemented). Review e2e tests are
- * marked as TODO below.
+ * NOTE: Review e2e tests for delivered orders are covered in delivery-flow.e2e-spec.ts.
  *
  * Run: npm run test:e2e -- --testPathPattern payment
  */

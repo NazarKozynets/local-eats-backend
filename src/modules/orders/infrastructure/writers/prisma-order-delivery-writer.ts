@@ -7,56 +7,67 @@ import { OrderNotFoundError } from '../../domain/errors/order-not-found.error';
 import type { OrderDeliveryWriter, } from '../../application/ports/order-delivery-writer.port';
 import type { OrderDeliveryView } from '../../application/ports/order-delivery-reader.port';
 
+type LoadedOrder = {
+    order: ReturnType<typeof OrderPrismaMapper.toDomain>;
+    customerUserId: string;
+};
+
 @Injectable()
 export class PrismaOrderDeliveryWriter implements OrderDeliveryWriter {
     constructor(private readonly prisma: PrismaService) {}
 
     async assignCourier(orderId: string, courierProfileId: string, actorUserId: string): Promise<OrderDeliveryView> {
-        const order = await this.loadOrder(orderId);
+        const { order, customerUserId } = await this.loadOrder(orderId);
         order.assignCourier(UUID.create(courierProfileId));
         await this.saveDeliveryState(order, actorUserId);
-        return this.toView(orderId, order);
+        return this.toView(orderId, order, customerUserId);
     }
 
     async unassignCourier(orderId: string, actorUserId: string): Promise<OrderDeliveryView> {
-        const order = await this.loadOrder(orderId);
+        const { order, customerUserId } = await this.loadOrder(orderId);
         order.unassignCourier();
         await this.saveDeliveryState(order, actorUserId);
-        return this.toView(orderId, order);
+        return this.toView(orderId, order, customerUserId);
     }
 
     async markPickedUp(orderId: string, actorUserId: string): Promise<OrderDeliveryView> {
-        const order = await this.loadOrder(orderId);
+        const { order, customerUserId } = await this.loadOrder(orderId);
         order.pickUp(new Date());
         await this.saveDeliveryState(order, actorUserId);
-        return this.toView(orderId, order);
+        return this.toView(orderId, order, customerUserId);
     }
 
     async startDelivering(orderId: string, actorUserId: string): Promise<OrderDeliveryView> {
-        const order = await this.loadOrder(orderId);
+        const { order, customerUserId } = await this.loadOrder(orderId);
         order.startDelivering();
         await this.saveDeliveryState(order, actorUserId);
-        return this.toView(orderId, order);
+        return this.toView(orderId, order, customerUserId);
     }
 
     async markDelivered(orderId: string, actorUserId: string): Promise<OrderDeliveryView> {
-        const order = await this.loadOrder(orderId);
+        const { order, customerUserId } = await this.loadOrder(orderId);
         order.markDelivered(new Date());
         await this.saveDeliveryState(order, actorUserId);
-        return this.toView(orderId, order);
+        return this.toView(orderId, order, customerUserId);
     }
 
     async markProblem(orderId: string, actorUserId: string): Promise<OrderDeliveryView> {
-        const order = await this.loadOrder(orderId);
+        const { order, customerUserId } = await this.loadOrder(orderId);
         order.markProblem();
         await this.saveDeliveryState(order, actorUserId);
-        return this.toView(orderId, order);
+        return this.toView(orderId, order, customerUserId);
     }
 
-    private async loadOrder(orderId: string) {
-        const raw = await this.prisma.order.findUnique({ where: { id: orderId } });
+    private async loadOrder(orderId: string): Promise<LoadedOrder> {
+        const raw = await this.prisma.order.findUnique({
+            where: { id: orderId },
+            include: { customer: { select: { userId: true } } },
+        });
         if (!raw) throw new OrderNotFoundError();
-        return OrderPrismaMapper.toDomain(raw);
+        return {
+            order: OrderPrismaMapper.toDomain(raw),
+            customerUserId: raw.customer.userId,
+        };
     }
 
     private async saveDeliveryState(order: ReturnType<typeof OrderPrismaMapper.toDomain>, actorUserId: string): Promise<void> {
@@ -83,12 +94,12 @@ export class PrismaOrderDeliveryWriter implements OrderDeliveryWriter {
         ]);
     }
 
-    private toView(orderId: string, order: ReturnType<typeof OrderPrismaMapper.toDomain>): OrderDeliveryView {
+    private toView(orderId: string, order: ReturnType<typeof OrderPrismaMapper.toDomain>, customerUserId: string): OrderDeliveryView {
         return {
             orderId: order.id.value,
             publicCode: order.publicCode,
             customerId: order.customerId.value,
-            customerUserId: order.customerId.value,
+            customerUserId,
             restaurantId: order.restaurantId.value,
             courierId: order.courierId?.value ?? null,
             status: order.status,

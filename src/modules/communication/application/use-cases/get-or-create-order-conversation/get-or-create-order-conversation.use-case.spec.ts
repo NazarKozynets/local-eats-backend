@@ -88,11 +88,27 @@ describe('GetOrCreateOrderConversationUseCase', () => {
         expect(result).toBeDefined();
     });
 
-    it('adds participant if not already in existing conversation', async () => {
+    it('adds participant if not already in existing conversation (restaurant staff)', async () => {
         const existing = buildConversation();
         conversationRepository.findByOrderId.mockResolvedValue(existing);
+        orderReader.findOrderForConversation.mockResolvedValue(
+            buildOrderReadModel({ restaurantStaffUserIds: [TEST_OTHER_USER_ID] }),
+        );
 
         await useCase.execute(command({ currentUserId: TEST_OTHER_USER_ID, currentUserRole: 'RESTAURANT_MANAGER' }));
         expect(conversationRepository.saveParticipant).toHaveBeenCalledTimes(1);
+    });
+
+    it('denies access to restaurant manager not in this restaurant staff', async () => {
+        await expect(
+            useCase.execute(command({ currentUserId: TEST_OTHER_USER_ID, currentUserRole: 'RESTAURANT_MANAGER' })),
+        ).rejects.toBeInstanceOf(OrderConversationAccessDeniedError);
+    });
+
+    it('admin can access any order conversation', async () => {
+        const result = await useCase.execute(
+            command({ currentUserId: TEST_OTHER_USER_ID, currentUserRole: 'ADMIN' }),
+        );
+        expect(result).toBeDefined();
     });
 });

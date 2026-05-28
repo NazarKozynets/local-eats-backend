@@ -34,6 +34,7 @@ type CreatePaymentProps = {
     provider: PaymentProvider;
     amount: number;
     currency: Currency;
+    providerPaymentId?: string | null;
 };
 
 export class Payment {
@@ -63,7 +64,7 @@ export class Payment {
             status: PaymentStatus.PENDING,
             amount: p.amount,
             currency: p.currency,
-            providerPaymentId: null,
+            providerPaymentId: p.providerPaymentId ?? null,
             failureReason: null,
             paidAt: null,
             refundedAt: null,

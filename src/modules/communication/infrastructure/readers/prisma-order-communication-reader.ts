@@ -19,6 +19,11 @@ export class PrismaOrderCommunicationReader implements OrderCommunicationReader 
                 courierId: true,
                 customer: { select: { userId: true } },
                 courier: { select: { userId: true } },
+                restaurant: {
+                    select: {
+                        staff: { select: { userId: true } },
+                    },
+                },
             },
         });
 
@@ -29,6 +34,7 @@ export class PrismaOrderCommunicationReader implements OrderCommunicationReader 
             customerId: row.customerId,
             customerUserId: row.customer.userId,
             restaurantId: row.restaurantId,
+            restaurantStaffUserIds: row.restaurant.staff.map(s => s.userId),
             courierId: row.courierId,
             courierUserId: row.courier?.userId ?? null,
         };

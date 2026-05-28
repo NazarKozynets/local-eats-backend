@@ -17,6 +17,7 @@ enum UserRole {
   COURIER
   RESTAURANT_MANAGER
   ADMIN
+  PROVIDER
 }
 
 enum UserStatus {

@@ -18,11 +18,16 @@ import {
     ORDER_PAYMENT_WRITER,
     type OrderPaymentWriter,
 } from '../../ports/order-payment-writer.port';
+import {
+    PAYMENT_PROVIDER_PORT,
+    type PaymentProviderPort,
+} from '../../ports/payment-provider.port';
 import { PaymentProviderSelector } from '../../services/payment-provider-selector';
 import { PaymentNotFoundError } from '../../../domain/errors/payment-not-found.error';
 import { PaymentAlreadyExistsError } from '../../../domain/errors/payment-already-exists.error';
 import { PaymentOrderAccessDeniedError } from '../../../domain/errors/payment-order-access-denied.error';
 import { OrderNotPayableError } from '../../../domain/errors/order-not-payable.error';
+import { InvalidPaymentProviderError } from '../../../domain/errors/invalid-payment-provider.error';
 import type { CreatePaymentCommand } from './create-payment.command';
 
 @Injectable()
@@ -36,6 +41,8 @@ export class CreatePaymentUseCase {
         private readonly orderPaymentWriter: OrderPaymentWriter,
         @Inject(DOMAIN_EVENT_PUBLISHER)
         private readonly eventPublisher: DomainEventPublisher,
+        @Inject(PAYMENT_PROVIDER_PORT)
+        private readonly paymentProviders: PaymentProviderPort[],
         private readonly providerSelector: PaymentProviderSelector,
     ) {}
 
@@ -68,14 +75,27 @@ export class CreatePaymentUseCase {
             throw new OrderNotPayableError(`Order in status ${orderInfo.orderStatus} cannot be paid`);
         }
 
-        const provider = this.providerSelector.select(orderInfo.paymentMethod);
+        const providerName = this.providerSelector.select(orderInfo.paymentMethod);
+        const provider = this.paymentProviders.find(p => p.providerName === providerName);
+        if (!provider) {
+            throw new InvalidPaymentProviderError(String(providerName));
+        }
 
-        const payment = Payment.create({
-            id: UUID.generate(),
-            orderId: UUID.create(command.orderId),
-            provider,
+        const paymentId = UUID.generate();
+        const { providerPaymentId } = await provider.createPayment({
+            paymentId: paymentId.value,
+            orderId: command.orderId,
             amount: orderInfo.totalPrice,
             currency: orderInfo.currency,
+        });
+
+        const payment = Payment.create({
+            id: paymentId,
+            orderId: UUID.create(command.orderId),
+            provider: providerName,
+            amount: orderInfo.totalPrice,
+            currency: orderInfo.currency,
+            providerPaymentId,
         });
 
         await this.paymentRepository.save(payment);

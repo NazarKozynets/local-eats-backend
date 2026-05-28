@@ -65,6 +65,7 @@ export function buildOrderReadModel(overrides: Partial<OrderCommunicationReadMod
         customerId: TEST_CUSTOMER_PROFILE_ID,
         customerUserId: TEST_CUSTOMER_USER_ID,
         restaurantId: TEST_RESTAURANT_ID,
+        restaurantStaffUserIds: [],
         courierId: TEST_COURIER_PROFILE_ID,
         courierUserId: TEST_COURIER_USER_ID,
         ...overrides,

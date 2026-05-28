@@ -3,6 +3,7 @@ export type OrderCommunicationReadModel = {
     customerId: string;
     customerUserId: string;
     restaurantId: string;
+    restaurantStaffUserIds: string[];
     courierId: string | null;
     courierUserId: string | null;
 };

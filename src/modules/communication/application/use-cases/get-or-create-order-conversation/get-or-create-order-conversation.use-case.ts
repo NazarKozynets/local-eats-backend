@@ -40,9 +40,10 @@ export class GetOrCreateOrderConversationUseCase {
 
         const isCustomer = order.customerUserId === command.currentUserId;
         const isCourier = order.courierUserId !== null && order.courierUserId === command.currentUserId;
-        const isRestaurantManager = command.currentUserRole === 'RESTAURANT_MANAGER';
+        const isAdmin = command.currentUserRole === 'ADMIN';
+        const isRestaurantStaff = order.restaurantStaffUserIds.includes(command.currentUserId);
 
-        if (!isCustomer && !isCourier && !isRestaurantManager) {
+        if (!isCustomer && !isCourier && !isAdmin && !isRestaurantStaff) {
             throw new OrderConversationAccessDeniedError();
         }
 
@@ -64,7 +65,7 @@ export class GetOrCreateOrderConversationUseCase {
             await this.conversationRepository.save(conversation);
             events.push(new ConversationCreatedEvent(conversation.id.value, command.orderId));
         } else if (!conversation.isParticipant(command.currentUserId)) {
-            const role = this.resolveRole(command.currentUserRole, isCustomer, isCourier);
+            const role = this.resolveRole(command.currentUserRole, isCustomer, isCourier, isRestaurantStaff);
             const participant = conversation.addParticipant(UUID.create(command.currentUserId), role);
             await this.conversationRepository.saveParticipant(participant);
         }
@@ -80,9 +81,11 @@ export class GetOrCreateOrderConversationUseCase {
         userRole: string,
         isCustomer: boolean,
         isCourier: boolean,
+        isRestaurantStaff: boolean,
     ): ConversationParticipantRole {
         if (isCustomer) return ConversationParticipantRole.CUSTOMER;
         if (isCourier) return ConversationParticipantRole.COURIER;
+        if (isRestaurantStaff) return ConversationParticipantRole.RESTAURANT_MANAGER;
         if (userRole === 'ADMIN') return ConversationParticipantRole.ADMIN;
         return ConversationParticipantRole.RESTAURANT_MANAGER;
     }

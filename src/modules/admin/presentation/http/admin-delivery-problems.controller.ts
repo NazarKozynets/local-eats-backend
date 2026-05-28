@@ -9,6 +9,8 @@ import {
     Query,
     UseGuards,
 } from '@nestjs/common';
+import { CurrentUser } from '../../../iam/presentation/decorators/current-user.decorator';
+import type { AuthUser } from '../../../iam/presentation/types/auth-user.type';
 import {
     ApiBearerAuth,
     ApiConflictResponse,
@@ -60,7 +62,10 @@ export class AdminDeliveryProblemsController {
     @ApiNoContentResponse({ description: 'Delivery problem resolved' })
     @ApiNotFoundResponse({ description: 'Delivery problem not found' })
     @ApiConflictResponse({ description: 'Delivery problem is already resolved' })
-    async resolve(@Param('problemId', ParseUUIDPipe) problemId: string): Promise<void> {
-        return this.resolveDeliveryProblemUseCase.execute({ problemId });
+    async resolve(
+        @Param('problemId', ParseUUIDPipe) problemId: string,
+        @CurrentUser() user: AuthUser,
+    ): Promise<void> {
+        return this.resolveDeliveryProblemUseCase.execute({ problemId, adminUserId: user.userId });
     }
 }
